@@ -664,6 +664,10 @@ tr.row-done .task-check{pointer-events:none}
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
       Daily Tasks
     </div>
+    <div class="nav-item" onclick="show('manager',this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Manager View 👑
+    </div>
   </div>
 
   <div class="nav-group">
@@ -711,7 +715,11 @@ tr.row-done .task-check{pointer-events:none}
 
   <div class="nav-group">
     <div class="nav-group-label" style="color:var(--ni-muted)">Nissan</div>
-    <div class="nav-item nissan" onclick="show('sms-nissan',this,'nissan')">
+    <div class="nav-item nissan" onclick="show('lost-offer-nissan',this,'nissan')">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      Lost Customer Offer
+      <span class="nav-badge">34</span>
+    </div>
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       SMS Templates
       <span class="nav-badge">6</span>
@@ -763,6 +771,32 @@ tr.row-done .task-check{pointer-events:none}
 <!-- Main -->
 <div class="main">
 
+  <!-- ── MANAGER VIEW ── -->
+  <div id="tab-manager" class="tab-panel">
+    <div class="page-header">
+      <div>
+        <div class="page-eyebrow">Operations · Manager Only</div>
+        <div class="page-title">👑 Team Progress</div>
+        <div class="page-sub" style="margin-top:4px" id="managerDate">Today's task completion</div>
+      </div>
+      <div class="header-right">
+        <div class="live-badge" id="managerStatus"><span class="live-dot"></span>Loading...</div>
+        <button class="btn" onclick="loadManagerView()">↻ Refresh</button>
+      </div>
+    </div>
+    <div id="managerCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px"></div>
+    <div class="card">
+      <div class="card-title">Task Details</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Agent</th><th>Task</th><th>Status</th></tr></thead>
+          <tbody id="managerBody"><tr class="loading-row"><td colspan="3">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="page-footer" id="managerFooter"></div>
+  </div>
+
   <!-- ── DAILY TASKS ── -->
   <div id="tab-tasks" class="tab-panel active">
     <div class="page-header">
@@ -787,6 +821,29 @@ tr.row-done .task-check{pointer-events:none}
     </div>
 
     <div class="page-footer" id="taskFooter"></div>
+  </div>
+
+  <!-- ── LOST CUSTOMER OFFER NISSAN ── -->
+  <div id="tab-lost-offer-nissan" class="tab-panel">
+    <div class="page-header">
+      <div>
+        <div class="page-eyebrow" style="color:var(--ni-muted)">Nissan · Reference</div>
+        <div class="page-title nissan">Lost Customer Offer</div>
+        <div class="page-sub" style="margin-top:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="background:var(--ni-bg);color:var(--ni);font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px">🔧 Oil & Filter Change Prices</span>
+          <span style="color:var(--text2);font-size:13px">For vehicles out of warranty only · 34 Models</span>
+          <span class="live-badge" id="lostOfferStatus"><span class="live-dot"></span>Loading...</span>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Model</th><th>Price (VAT Included)</th></tr></thead>
+          <tbody id="lostOfferBody"><tr class="loading-row"><td colspan="3">Loading from Google Sheets...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <!-- ── SMS STELLANTIS ── -->
@@ -1238,6 +1295,7 @@ tr.row-done .task-check{pointer-events:none}
 
 <script>
 const SHEET='1IYeyE-2h-kJGm2um4iKIfryrj1qdW-p-zGCMZLcbxrg';
+const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbx6mWXhVu7BP6BHg-_hR8ChM5oBPtYv45EIEnICqfyZfPi_wRfdY5dGwL1gwk6hMJpl8Q/exec';
 
 // ── NAV ──
 function show(id,el,brand){
@@ -1245,7 +1303,9 @@ function show(id,el,brand){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
   if(el){el.classList.add('active');if(brand)el.classList.add(brand)}
+  if(id==='manager')loadManagerView();
   if(id==='tasks')loadTasks();
+  if(id==='lost-offer-nissan')loadLostOffer();
   if(id==='sms-stellantis')renderSMS('stellantis');
   if(id==='sms-nissan')renderSMS('nissan');
   if(id==='script-stellantis')renderScript('stellantis');
@@ -1383,6 +1443,60 @@ function doSearch(q){
     </div>`).join('');
 }
 
+// ── MANAGER VIEW ──
+async function loadManagerView(){
+  const statusEl=document.getElementById('managerStatus');
+  statusEl.innerHTML='<span class="live-dot"></span>Updating...';
+  try{
+    const res=await fetch(APPS_SCRIPT_URL);
+    const data=await res.json();
+    renderManagerView(data);
+    statusEl.innerHTML='<span class="live-dot"></span>Live ✓';
+    statusEl.style.background='var(--green-bg)';statusEl.style.color='var(--green)';
+  }catch(e){
+    statusEl.innerHTML='<span class="live-dot"></span>Error';
+    statusEl.style.background='var(--red-bg)';statusEl.style.color='var(--red)';
+    document.getElementById('managerBody').innerHTML='<tr><td colspan="3" style="text-align:center;color:var(--text3)">Could not load. Try refreshing.</td></tr>';
+  }
+  document.getElementById('managerFooter').textContent='Last updated: '+new Date().toLocaleTimeString();
+}
+function renderManagerView(data){
+  // Group by agent
+  const byAgent={};
+  AGENTS.forEach(a=>{ byAgent[a.name]={done:0,total:0,tasks:[]}; });
+  data.forEach(row=>{
+    if(!byAgent[row.agent]) byAgent[row.agent]={done:0,total:0,tasks:[]};
+    byAgent[row.agent].total++;
+    if(row.done) byAgent[row.agent].done++;
+    byAgent[row.agent].tasks.push(row);
+  });
+
+  // Agent cards
+  document.getElementById('managerCards').innerHTML=AGENTS.map(a=>{
+    const d=byAgent[a.name]||{done:0,total:0};
+    const pct=d.total>0?Math.round((d.done/d.total)*100):0;
+    return`<div class="metric" style="border-top:3px solid ${a.color}">
+      <div class="metric-label" style="color:${a.color}">${a.name}</div>
+      <div class="metric-val">${d.done}<span style="font-size:16px;color:var(--text3)">/${d.total}</span></div>
+      <div style="height:5px;background:var(--surface2);border-radius:3px;margin-top:8px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${a.color};border-radius:3px;transition:width .5s"></div>
+      </div>
+      <div class="metric-sub" style="margin-top:4px">${pct}% complete</div>
+    </div>`;
+  }).join('');
+
+  // Task detail table
+  document.getElementById('managerBody').innerHTML=data.length?data.map(row=>`
+    <tr>
+      <td><span style="font-weight:600">${row.agent}</span></td>
+      <td>${row.task}</td>
+      <td>${row.done
+        ?'<span style="color:var(--green);font-weight:600">✓ Done</span>'
+        :'<span style="color:var(--text3)">○ Pending</span>'}</td>
+    </tr>`).join('')
+    :'<tr><td colspan="3" style="text-align:center;color:var(--text3);padding:20px">No data yet today. Tasks will appear when agents start checking off items.</td></tr>';
+}
+
 // ── CELEBRATION ──
 const EMOJIS=['🌟','⭐','🏆','🎊','🔥','💫','✨'];
 function showCelebrate(agentName, color){
@@ -1435,6 +1549,12 @@ function toggleCheck(agentIdx,taskName){
   const cur=localStorage.getItem(key)==='1';
   if(cur) localStorage.removeItem(key);
   else localStorage.setItem(key,'1');
+  // Sync to Google Sheet
+  const agentName=AGENTS[agentIdx]?AGENTS[agentIdx].name:'Unknown';
+  fetch(APPS_SCRIPT_URL,{
+    method:'POST',
+    body:JSON.stringify({agent:agentName,task:taskName,done:!cur}),
+  }).catch(()=>{});
   refreshAgentPanel(agentIdx);
   if(!cur) checkAllDone(agentIdx);
 }
@@ -1644,6 +1764,42 @@ function renderTasksFallback(){
     {name:'Recall 77C',                          req:16,  tgt:5,   r:4,  rt:1,  g:5,  gt:1,  ra:5,  rat:1,  gh:5,  ght:1,  f:5,  ft:1},
     {name:'PMS Priority List',                   req:769, tgt:149, r:30, rt:6,  g:29, gt:7,  ra:30, rat:8,  gh:30, ght:8,  f:30, ft:8},
   ]);
+}
+
+// ── LOST CUSTOMER OFFER NISSAN ──
+const LOST_OFFER_FALLBACK=[
+  ['Altima L33',387],['Altima L33 V6',395],['Altima L34 2.0 L',391],['Altima L34 2.5 L',408],
+  ['Armada TA60',466],['CIVILIAN W41',515],['Civilian W41 (D)',536],['D22',346],
+  ['D22 4x4',371],['D40',387],['Juke F15',321],['Kicks P15',395],
+  ['Maxima A35',395],['Maxima A36',395],['Murano Z51',395],['Navara D23',391],
+  ['Navara D23 4X4',416],['Pathfinder R52',395],['Pathfinder R53',395],
+  ['Patrol Y61',478],['Patrol Y62 V6',408],['Patrol Y62 V8',466],['Patrol Y63 V6',404],
+  ['Qashqai J10',379],['Sentra B17',321],['Sunny N17',321],['Sunny N18',375],
+  ['Tida C11',362],['Urvan E26',371],['Urvan E26 (D)',520],
+  ['X-Terra (WD23)',387],['X-Terra N50',408],['Xtrail T32',387],['Xtrail T33',387],
+];
+async function loadLostOffer(){
+  const statusEl=document.getElementById('lostOfferStatus');
+  statusEl.innerHTML='<span class="live-dot"></span>Updating...';
+  let data=LOST_OFFER_FALLBACK;
+  try{
+    const rows=await fetchSheet('558895572');
+    const parsed=rows.slice(1).filter(r=>r[0]&&r[0].trim()&&r[1]).map(r=>[(r[0]||'').trim(),+r[1]||0]);
+    if(parsed.length){
+      data=parsed;
+      statusEl.innerHTML='<span class="live-dot"></span>Live ✓';
+      statusEl.style.background='var(--green-bg)';statusEl.style.color='var(--green)';
+    }
+  }catch(e){
+    statusEl.innerHTML='<span class="live-dot"></span>Cached';
+    statusEl.style.background='var(--amber-bg)';statusEl.style.color='var(--amber)';
+  }
+  document.getElementById('lostOfferBody').innerHTML=data.map(([model,price],i)=>`
+    <tr>
+      <td class="num muted">${i+1}</td>
+      <td><strong>${model}</strong></td>
+      <td><span style="background:var(--ni-bg);color:var(--ni);font-size:13px;font-weight:700;padding:3px 10px;border-radius:20px;">${price} SAR</span></td>
+    </tr>`).join('');
 }
 
 // ── SMS DATA ──
